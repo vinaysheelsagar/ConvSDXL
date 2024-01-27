@@ -1,49 +1,119 @@
 import os
+import gc
 import torch
+from .enums import *
+from PIL import Image
 from datetime import datetime
 from diffusers import DiffusionPipeline, AutoencoderKL
-from .enums import *
-
-vae = AutoencoderKL.from_pretrained("madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16)
-pipe = DiffusionPipeline.from_pretrained(
-    "stabilityai/stable-diffusion-xl-base-1.0",
-    vae=vae, torch_dtype=torch.float16, variant="fp16",
-    use_safetensors=True
-)
-
-_ = pipe.to("cuda")
-
-def __clean_prompt(prompt: str):
-  cleaned_prompt = prompt.strip()
-  return cleaned_prompt
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
+    StableDiffusionXLImg2ImgPipeline)
 
 
-def __save_image(image, image_dir):
-  image_path = os.path.join(image_dir, f"{datetime.now()}.png")
-  image.save(image_path, "PNG")
+_base: StableDiffusionXLPipeline | None = None
+_refiner: StableDiffusionXLImg2ImgPipeline | None = None
+
+
+def _clear_garbage():
+    gc.collect()
+
+
+def set_base(
+        model: str = "stabilityai/stable-diffusion-xl-base-1.0",
+        vae: str = "madebyollin/sdxl-vae-fp16-fix",
+        base=None,
+):
+    global _base
+
+    if base is not None:
+        _base = base
+        return
+
+    _clear_garbage()
+
+    vae = AutoencoderKL.from_pretrained(vae, torch_dtype=torch.float16)
+
+    _base = DiffusionPipeline.from_pretrained(
+        model,
+        vae=vae,
+        torch_dtype=torch.float16,
+        variant="fp16",
+        use_safetensors=True
+    )
+    _base.to("cuda")
+
+
+def remove_base():
+    global _base
+    _base = None
+    torch.cuda.empty_cache()
+    _clear_garbage()
+
+
+def set_refiner(
+        model: str = "stabilityai/stable-diffusion-xl-refiner-1.0",
+        vae: str = "madebyollin/sdxl-vae-fp16-fix",
+        refiner=None,
+):
+    global _refiner
+
+    if refiner is not None:
+        _refiner = refiner
+        return
+
+    _clear_garbage()
+
+    vae = AutoencoderKL.from_pretrained(vae, torch_dtype=torch.float16)
+
+    _refiner = DiffusionPipeline.from_pretrained(
+        model,
+        vae=vae,
+        torch_dtype=torch.float16,
+        variant="fp16",
+        use_safetensors=True
+    )
+    _refiner.to("cuda")
+
+
+def remove_refiner(refiner: StableDiffusionXLImg2ImgPipeline):
+    global _refiner
+    _refiner = None
+    torch.cuda.empty_cache()
+    _clear_garbage()
+
+
+def _clean_prompt(prompt: str):
+    cleaned_prompt = prompt.strip()
+    return cleaned_prompt
+
+
+def _save_image(image, image_dir):
+    image_path = os.path.join(image_dir, f"{datetime.now()}.png")
+    image.save(image_path, "PNG")
 
 
 def add_design_to_prompt(prompt: str, negative_prompt: str, design_type: DesignType):
+    # TODO: Better management of strings
     match design_type:
         case DesignType.DigitalArt:
             designed_prompt = f"""concept art {prompt} . digital artwork, illustrative, painterly, matte painting, highly detailed"""
-            designed_negative_prompt =  f"""{negative_prompt} photo, photorealistic, realism, ugly"""
+            designed_negative_prompt = f"""{negative_prompt} photo, photorealistic, realism, ugly"""
 
         case DesignType.Anime:
             designed_prompt = f"""anime artwork {prompt} . anime style, key visual, vibrant, studio anime, highly detailed"""
-            designed_negative_prompt =  f"""{negative_prompt} photo, deformed, black and white, realism, disfigured, low contrast"""
+            designed_negative_prompt = f"""{negative_prompt} photo, deformed, black and white, realism, disfigured, low contrast"""
 
         case DesignType.Neonpunk:
             designed_prompt = f"""neonpunk style {prompt} . cyberpunk, vaporwave, neon, vibes, vibrant, stunningly beautiful, crisp, detailed, sleek, ultramodern, magenta highlights, dark purple shadows, high contrast, cinematic, ultra detailed, intricate, professional"""
-            designed_negative_prompt =  f"""{negative_prompt} painting, drawing, illustration, glitch, deformed, mutated, cross-eyed, ugly, disfigured"""
+            designed_negative_prompt = f"""{negative_prompt} painting, drawing, illustration, glitch, deformed, mutated, cross-eyed, ugly, disfigured"""
 
         case DesignType.PixelArt:
             designed_prompt = f"""pixel-art {prompt} . low-res, blocky, pixel art style, 8-bit graphics"""
-            designed_negative_prompt =  f"""{negative_prompt} sloppy, messy, blurry, noisy, highly detailed, ultra textured, photo, realistic"""
+            designed_negative_prompt = f"""{negative_prompt} sloppy, messy, blurry, noisy, highly detailed, ultra textured, photo, realistic"""
 
         case DesignType.Minimalist:
             designed_prompt = f"""minimalist style {prompt} . simple, clean, uncluttered, modern, elegant"""
-            designed_negative_prompt =  f"""{negative_prompt} ornate, complicated, highly detailed, cluttered, disordered, messy, noisy"""
+            designed_negative_prompt = f"""{negative_prompt} ornate, complicated, highly detailed, cluttered, disordered, messy, noisy"""
 
         case _:
             raise ValueError("No such DesignType")
@@ -58,10 +128,15 @@ def get_image(
         design_type: DesignType = None,
         image_dir: str = None,
 ):
+    global _base
+
+    if _base is None:
+        set_base()
+
     os.makedirs(image_dir, exist_ok=True)
 
-    _prompt = __clean_prompt(prompt)
-    _negative_prompt = __clean_prompt(negative_prompt)
+    _prompt = _clean_prompt(prompt)
+    _negative_prompt = _clean_prompt(negative_prompt)
 
     if design_type is not None:
         designed_prompts = add_design_to_prompt(_prompt, _negative_prompt, design_type)
@@ -69,13 +144,50 @@ def get_image(
         _prompt = designed_prompts[0]
         _negative_prompt = designed_prompts[1]
 
-    image = pipe(
+    image = _base(
         prompt=_prompt,
         negative_prompt=_negative_prompt,
         num_inference_steps=num_inference_steps,
     ).images[0]
 
     if image_dir is not None:
-        __save_image(image, image_dir)
+        _save_image(image, image_dir)
+
+    return image
+
+
+def refine_image(
+        image: Image,
+        prompt: str,
+        negative_prompt: str = "",
+        num_inference_steps: int = 25,
+        design_type: DesignType = None,
+        image_dir: str = None,
+):
+    global _refiner
+
+    if _refiner is None:
+        set_refiner()
+
+    os.makedirs(image_dir, exist_ok=True)
+
+    _prompt = _clean_prompt(prompt)
+    _negative_prompt = _clean_prompt(negative_prompt)
+
+    if design_type is not None:
+        designed_prompts = add_design_to_prompt(_prompt, _negative_prompt, design_type)
+
+        _prompt = designed_prompts[0]
+        _negative_prompt = designed_prompts[1]
+
+    image = _refiner(
+        prompt=_prompt,
+        negative_prompt=_negative_prompt,
+        image=image,
+        num_inference_steps=num_inference_steps,
+    ).images[0]
+
+    if image_dir is not None:
+        _save_image(image, image_dir)
 
     return image

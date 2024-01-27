@@ -30,14 +30,14 @@ image = convsdxl.get_image(prompt, negative_prompt="NEGATIVE PROMPT HERE")
 
 ## Simply provide a path to save it as well:
 ~~~
-image = convsdxl.get_image(prompt, negative_prompt, image_dir="IMAGE PATH")
+image = convsdxl.get_image(prompt, image_dir="IMAGE PATH")
 ~~~
 
 ## To add style to the images:
 ~~~
 from convsdxl.enums import DesignType
 
-image = convsdxl.get_image(prompt, negative_prompt, design_type=DesignType.StyleName)
+image = convsdxl.get_image(prompt, design_type=DesignType.StyleName)
 ~~~
 
 There are few styles available for now.
