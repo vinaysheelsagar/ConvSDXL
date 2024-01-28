@@ -146,6 +146,7 @@ def get_image(
     prompt = _clean_prompt(prompt)
     if negative_prompt is not None:
         negative_prompt = _clean_prompt(negative_prompt)
+        args["negative_prompt"] = negative_prompt
 
     if design_type is not None:
         designed_prompts = add_design_to_prompt(
@@ -156,8 +157,7 @@ def get_image(
 
         prompt = designed_prompts[0]
         negative_prompt = designed_prompts[1]
-
-    args["negative_prompt"] = negative_prompt
+        args["negative_prompt"] = negative_prompt
 
     image = _base(
         prompt=prompt,
@@ -173,7 +173,7 @@ def get_image(
 
 def refine_image(
         image: Image,
-        prompt: str = None,
+        prompt: str,
         negative_prompt: str = None,
         num_inference_steps: int = 25,
         design_type: DesignType = None,
@@ -187,11 +187,10 @@ def refine_image(
     if _refiner is None:
         set_refiner()
 
+    prompt = _clean_prompt(prompt)
     if negative_prompt is not None:
         negative_prompt = _clean_prompt(negative_prompt)
-
-    if prompt is not None:
-        prompt = _clean_prompt(prompt)
+        args["negative_prompt"] = negative_prompt
 
     if design_type is not None:
         designed_prompts = add_design_to_prompt(
@@ -202,8 +201,9 @@ def refine_image(
 
         prompt = designed_prompts[0]
         negative_prompt = designed_prompts[1]
+        args["negative_prompt"] = negative_prompt
 
-    args["negative_prompt"] = negative_prompt
+
     args["prompt"] = prompt
 
     image = _refiner(
