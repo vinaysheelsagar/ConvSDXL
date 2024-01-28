@@ -73,6 +73,7 @@ def set_refiner(
         use_safetensors=True
     )
     _refiner.to("cuda")
+    _refiner()
 
 
 def remove_refiner():
@@ -92,7 +93,7 @@ def _save_image(image, image_dir):
     image.save(image_path, "PNG")
 
 
-def add_design_to_prompt(design_type: DesignType, prompt: str = None, negative_prompt: str = None):
+def add_design_to_prompt(design_type: DesignType, prompt: str | None = None, negative_prompt: str | None = None):
 
     if prompt is None:
         prompt = ""
@@ -134,9 +135,9 @@ def get_image(
         num_inference_steps: int = 25,
         design_type: DesignType = None,
         image_dir: str = None,
+        **model_kwargs
 ):
     global _base
-    args = dict()
 
     os.makedirs(image_dir, exist_ok=True)
 
@@ -146,7 +147,7 @@ def get_image(
     prompt = _clean_prompt(prompt)
     if negative_prompt is not None:
         negative_prompt = _clean_prompt(negative_prompt)
-        args["negative_prompt"] = negative_prompt
+        model_kwargs["negative_prompt"] = negative_prompt
 
     if design_type is not None:
         designed_prompts = add_design_to_prompt(
@@ -157,12 +158,12 @@ def get_image(
 
         prompt = designed_prompts[0]
         negative_prompt = designed_prompts[1]
-        args["negative_prompt"] = negative_prompt
+        model_kwargs["negative_prompt"] = negative_prompt
 
     image = _base(
         prompt=prompt,
         num_inference_steps=num_inference_steps,
-        **args
+        **model_kwargs
     ).images[0]
 
     if image_dir is not None:
@@ -178,9 +179,9 @@ def refine_image(
         num_inference_steps: int = 25,
         design_type: DesignType = None,
         image_dir: str = None,
+        **model_kwargs,
 ):
     global _refiner
-    args = dict()
 
     os.makedirs(image_dir, exist_ok=True)
 
@@ -190,7 +191,7 @@ def refine_image(
     prompt = _clean_prompt(prompt)
     if negative_prompt is not None:
         negative_prompt = _clean_prompt(negative_prompt)
-        args["negative_prompt"] = negative_prompt
+        model_kwargs["negative_prompt"] = negative_prompt
 
     if design_type is not None:
         designed_prompts = add_design_to_prompt(
@@ -201,15 +202,13 @@ def refine_image(
 
         prompt = designed_prompts[0]
         negative_prompt = designed_prompts[1]
-        args["negative_prompt"] = negative_prompt
-
-
-    args["prompt"] = prompt
+        model_kwargs["negative_prompt"] = negative_prompt
 
     image = _refiner(
         image=image,
+        prompt=prompt,
         num_inference_steps=num_inference_steps,
-        **args
+        **model_kwargs,
     ).images[0]
 
     if image_dir is not None:
