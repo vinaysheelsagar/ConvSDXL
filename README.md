@@ -28,7 +28,8 @@ Or provide the negative prompt to *negative_prompt* parameter
 image = convsdxl.get_image(prompt, negative_prompt="NEGATIVE PROMPT HERE")
 ~~~
 
-## Simply provide a path to save it as well:
+## To save the image as you get it:
+Simply provide a path to save it
 ~~~
 image = convsdxl.get_image(prompt, image_dir="IMAGE PATH")
 ~~~

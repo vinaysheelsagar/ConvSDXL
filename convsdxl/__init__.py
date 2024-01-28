@@ -92,7 +92,14 @@ def _save_image(image, image_dir):
     image.save(image_path, "PNG")
 
 
-def add_design_to_prompt(prompt: str, negative_prompt: str, design_type: DesignType):
+def add_design_to_prompt(design_type: DesignType, prompt: str = None, negative_prompt: str = None):
+
+    if prompt is None:
+        prompt = ""
+
+    if negative_prompt is None:
+        negative_prompt = ""
+
     # TODO: Better management of strings
     match design_type:
         case DesignType.DigitalArt:
@@ -123,31 +130,39 @@ def add_design_to_prompt(prompt: str, negative_prompt: str, design_type: DesignT
 
 def get_image(
         prompt: str,
-        negative_prompt: str = "",
+        negative_prompt: str = None,
         num_inference_steps: int = 25,
         design_type: DesignType = None,
         image_dir: str = None,
 ):
     global _base
+    args = dict()
+
+    os.makedirs(image_dir, exist_ok=True)
 
     if _base is None:
         set_base()
 
-    os.makedirs(image_dir, exist_ok=True)
-
-    _prompt = _clean_prompt(prompt)
-    _negative_prompt = _clean_prompt(negative_prompt)
+    prompt = _clean_prompt(prompt)
+    if negative_prompt is not None:
+        negative_prompt = _clean_prompt(negative_prompt)
 
     if design_type is not None:
-        designed_prompts = add_design_to_prompt(_prompt, _negative_prompt, design_type)
+        designed_prompts = add_design_to_prompt(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            design_type=design_type,
+        )
 
-        _prompt = designed_prompts[0]
-        _negative_prompt = designed_prompts[1]
+        prompt = designed_prompts[0]
+        negative_prompt = designed_prompts[1]
+
+    args["negative_prompt"] = negative_prompt
 
     image = _base(
-        prompt=_prompt,
-        negative_prompt=_negative_prompt,
+        prompt=prompt,
         num_inference_steps=num_inference_steps,
+        **args
     ).images[0]
 
     if image_dir is not None:
@@ -158,33 +173,43 @@ def get_image(
 
 def refine_image(
         image: Image,
-        prompt: str,
-        negative_prompt: str = "",
+        prompt: str = None,
+        negative_prompt: str = None,
         num_inference_steps: int = 25,
         design_type: DesignType = None,
         image_dir: str = None,
 ):
     global _refiner
+    args = dict()
+
+    os.makedirs(image_dir, exist_ok=True)
 
     if _refiner is None:
         set_refiner()
 
-    os.makedirs(image_dir, exist_ok=True)
+    if negative_prompt is not None:
+        negative_prompt = _clean_prompt(negative_prompt)
 
-    _prompt = _clean_prompt(prompt)
-    _negative_prompt = _clean_prompt(negative_prompt)
+    if prompt is not None:
+        prompt = _clean_prompt(prompt)
 
     if design_type is not None:
-        designed_prompts = add_design_to_prompt(_prompt, _negative_prompt, design_type)
+        designed_prompts = add_design_to_prompt(
+            design_type=design_type,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+        )
 
-        _prompt = designed_prompts[0]
-        _negative_prompt = designed_prompts[1]
+        prompt = designed_prompts[0]
+        negative_prompt = designed_prompts[1]
+
+    args["negative_prompt"] = negative_prompt
+    args["prompt"] = prompt
 
     image = _refiner(
-        prompt=_prompt,
-        negative_prompt=_negative_prompt,
         image=image,
         num_inference_steps=num_inference_steps,
+        **args
     ).images[0]
 
     if image_dir is not None:
