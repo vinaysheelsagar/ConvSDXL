@@ -75,7 +75,7 @@ def set_refiner(
     _refiner.to("cuda")
 
 
-def remove_refiner(refiner: StableDiffusionXLImg2ImgPipeline):
+def remove_refiner():
     global _refiner
     _refiner = None
     torch.cuda.empty_cache()
