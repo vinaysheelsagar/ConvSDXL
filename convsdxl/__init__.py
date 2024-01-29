@@ -319,8 +319,8 @@ class ConvSDXL:
 
         os.makedirs(image_dir, exist_ok=True)
 
-        if self._refiner is None:
-            self.set_refiner()
+        if self._upscaler is None:
+            self.set_upscaler()
 
         model_kwargs = preprocess_prompts(
             design_type=design_type,
@@ -328,7 +328,7 @@ class ConvSDXL:
             negative_prompt=negative_prompt,
         )
 
-        image = self._refiner(
+        image = self._upscaler(
             image=image,
             **model_kwargs,
         ).images[0]
