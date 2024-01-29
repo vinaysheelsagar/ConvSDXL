@@ -200,17 +200,17 @@ class ConvSDXL:
 
         # vae = AutoencoderKL.from_pretrained(vae, torch_dtype=torch.float16)
 
-        self._refiner = DiffusionPipeline.from_pretrained(
+        self._upscaler = DiffusionPipeline.from_pretrained(
             model,
             # vae=vae,
             torch_dtype=torch.float16,
             variant="fp16",
             use_safetensors=True
         )
-        self._refiner.to("cuda")
+        self._upscaler.to("cuda")
 
     def remove_upscaler(self):
-        self._refiner = None
+        self._upscaler = None
         torch.cuda.empty_cache()
         _clear_garbage()
 
