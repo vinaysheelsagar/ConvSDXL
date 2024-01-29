@@ -190,6 +190,7 @@ class ConvSDXL:
             model: str = "stabilityai/stable-diffusion-x4-upscaler",
             # vae: str = "madebyollin/sdxl-vae-fp16-fix",
             upscaler=None,
+            enable_attention_slicing: bool = True,
     ):
 
         if upscaler is not None:
@@ -208,6 +209,8 @@ class ConvSDXL:
             use_safetensors=True
         )
         self._upscaler.to("cuda")
+        if enable_attention_slicing:
+            self._upscaler.enable_attention_slicing()
 
     def remove_upscaler(self):
         self._upscaler = None
