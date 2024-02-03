@@ -56,4 +56,45 @@ Simply provide 'num_inference_steps' with any integer.
 image = convsdxl.get_image(prompt, num_inference_steps=25)
 ~~~
 
+**Any of the above mentioned parameters work with the following methods as well.**
+
+## Inpaint Image:
+Use this to make changes to an image. 
+~~~
+image = sdxl.inpaint_image(prompt, image, mask_image)
+~~~
+
+## Refine Image:
+Use this to refine the details of an image.
+~~~
+image = sdxl.refine_image(prompt, image)
+~~~
+
+## Upscale Image: (Doesn't work in Colab)
+Use this to enlarge the images.
+
+*Currently, upscaling images using [stabilityai/stable-diffusion-x4-upscaler](https://huggingface.co/stabilityai/stable-diffusion-x4-upscaler) is beyond Colab's free T4 instance's capability.*
+~~~
+image = sdxl.upscale_image(prompt, image)
+~~~
+
+
+---
+
+## Use With Other Models
+
+ConvSDXL can be used with other models as well by simply providing their HuggingFace handle or their loaded pipeline variable.
+
+~~~
+sdxl.set_base(model_name="HuggingFace Handle", ...)
+~~~
+or use an already initialized pipeline
+~~~
+pipe = diffusers.AnyPipeline(...)
+
+sdxl.set_base(base_pipeline=pipe)
+~~~
+
+**You can do the same for Inpaint, Refiner and Upscaler as well.**
+
 Have Fun!
